@@ -47,9 +47,19 @@ require('./config/passport');
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS configuration for multiple environments
+const allowedOrigins = [
+  'http://localhost:5173', // Development
+  'http://localhost:3000', // Alternative development port
+  process.env.CLIENT_URL,  // Production client URL
+  process.env.RAILWAY_STATIC_URL, // Railway static URL
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+].filter(Boolean);
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -57,7 +67,7 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -74,10 +84,10 @@ app.use(session({
     touchAfter: 24 * 3600 // lazy session update
   }),
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
     httpOnly: true, // Prevents XSS attacks
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: 'lax' // Helps with CSRF protection
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-site cookies for production
   }
 }));
 
@@ -86,11 +96,21 @@ app.use(passport.session());
 
 // Static files for uploaded images with CORS headers
 app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:5173');
+  // Allow multiple origins for uploads
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 }, express.static(path.join(__dirname, 'uploads')));
+
+// In production, serve the built frontend
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the built frontend
+  app.use(express.static(path.join(__dirname, '../dist')));
+}
 
 // File upload configuration
 const storage = multer.diskStorage({
@@ -305,6 +325,23 @@ app.post('/api/rooms/:roomId/leave', async (req, res) => {
   }
 });
 
+// Handle React routing in production - serve index.html for all non-API routes
+if (process.env.NODE_ENV === 'production') {
+  // Serve the React app for the root route
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
+  
+  // Catch all other routes that don't start with /api, /auth, or /uploads
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/uploads')) {
+      res.sendFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+      next();
+    }
+  });
+}
+
 // Socket.io connection handling
 const connectedUsers = new Map();
 
@@ -418,4 +455,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

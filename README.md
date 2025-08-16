@@ -2,6 +2,26 @@
 
 A modern real-time chat application built with React, Node.js, Socket.io, and MongoDB. Features include multiple chat rooms, image sharing, Google OAuth authentication, and push notifications.
 
+## 🚀 Quick Deploy
+
+### Deploy on Railway (Recommended)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/your-repo)
+
+1. **Fork this repository**
+2. **Connect to [Railway.app](https://railway.app)**
+3. **Add environment variables** (see `.env.example`)
+4. **Deploy automatically!**
+
+### Deploy on Render
+1. **Fork this repository**  
+2. **Connect to [Render.com](https://render.com)**
+3. **Use these settings:**
+   - Build Command: `npm install && npm run build && cd server && npm install`
+   - Start Command: `cd server && npm start`
+4. **Add your environment variables**
+
+---
+
 ## Features
 
 - ✅ Real-time messaging with Socket.io
@@ -60,6 +80,20 @@ SESSION_SECRET=your_strong_session_secret_here
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 CLIENT_URL=http://localhost:5173
+```
+
+## 🌐 Production Environment Variables
+
+For deployment, you'll need these environment variables:
+
+```env
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/chatapp
+SESSION_SECRET=your-super-secure-random-string-here
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+CLIENT_URL=https://your-deployed-app-url.com
 ```
 
 ### 3. Google OAuth Setup
