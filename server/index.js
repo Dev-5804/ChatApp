@@ -140,12 +140,16 @@ const upload = multer({
   }
 });
 
-// MongoDB connection with proper error handling for Render
+// MongoDB connection with comprehensive error handling for Render
 const connectDB = async () => {
   try {
     let mongoURI = process.env.MONGODB_URI;
     
     console.log('Attempting MongoDB connection...');
+    console.log('Environment check:');
+    console.log('- NODE_ENV:', process.env.NODE_ENV);
+    console.log('- MONGODB_URI set:', !!mongoURI);
+    console.log('- MONGODB_URI type:', mongoURI ? (mongoURI.includes('mongodb+srv') ? 'SRV' : 'Standard') : 'Not set');
     
     if (!mongoURI) {
       throw new Error('MONGODB_URI environment variable is not set');
@@ -241,65 +245,168 @@ const connectDB = async () => {
     
     console.log('Connecting to MongoDB...');
     
-    // Add specific connection options for better compatibility
-    const connectionOptions = {
-      // Connection management
-      maxPoolSize: 10,
-      minPoolSize: 2,
-      maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      
-      // For MongoDB Atlas SSL/TLS
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      tlsAllowInvalidHostnames: false
-    };
+    // Try different URI formats and connection strategies
+    const connectionStrategies = [
+      {
+        name: 'Standard Atlas Connection',
+        uri: mongoURI,
+        options: {
+          maxPoolSize: 10,
+          minPoolSize: 2,
+          maxIdleTimeMS: 30000,
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+          connectTimeoutMS: 10000,
+          tls: true,
+          tlsAllowInvalidCertificates: false,
+          tlsAllowInvalidHostnames: false
+        }
+      },
+      {
+        name: 'SRV with TLS',
+        uri: mongoURI.replace('mongodb://', 'mongodb+srv://'),
+        options: {
+          maxPoolSize: 10,
+          serverSelectionTimeoutMS: 8000,
+          socketTimeoutMS: 45000,
+          connectTimeoutMS: 15000,
+          tls: true,
+          tlsAllowInvalidCertificates: true,
+          tlsAllowInvalidHostnames: true
+        }
+      },
+      {
+        name: 'Simple Direct Connection',
+        uri: mongoURI,
+        options: {
+          serverSelectionTimeoutMS: 10000,
+          connectTimeoutMS: 10000
+        }
+      },
+      {
+        name: 'No TLS Connection (Fallback)',
+        uri: mongoURI,
+        options: {
+          serverSelectionTimeoutMS: 10000,
+          connectTimeoutMS: 10000,
+          tls: false,
+          ssl: false
+        }
+      }
+    ];
     
-    console.log('Using connection options:', JSON.stringify(connectionOptions, null, 2));
+    // Try each strategy
+    for (const strategy of connectionStrategies) {
+      try {
+        console.log(`🔄 Attempting ${strategy.name}...`);
+        console.log('Using connection options:', JSON.stringify(strategy.options, null, 2));
+        
+        await mongoose.connect(strategy.uri, strategy.options);
+        console.log(`✅ MongoDB connected successfully using ${strategy.name}`);
+        
+        // Seed default rooms after successful connection
+        await seedDefaultRooms();
+        return; // Success! Exit the function
+        
+      } catch (strategyError) {
+        console.log(`❌ ${strategy.name} failed: ${strategyError.message}`);
+        // Continue to next strategy
+      }
+    }
     
-    // Connect with specific options for Render compatibility
-    await mongoose.connect(mongoURI, connectionOptions);
+    // If we get here, all initial strategies failed
+    console.log('🚨 All initial connection strategies failed');
+    throw new Error('All connection strategies failed');
 
     console.log('✅ MongoDB connected successfully');
     
     // Seed default rooms after connection
     await seedDefaultRooms();
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
     
-    // Specific handling for SSL/TLS errors
-    if (error.message.includes('SSL') || error.message.includes('TLS')) {
-      console.log('🔧 SSL/TLS error detected. Retrying with modified TLS settings...');
-      
-      // Try again with less strict TLS settings
-      try {
-        const relaxedOptions = {
-          maxPoolSize: 10,
-          minPoolSize: 2,
-          maxIdleTimeMS: 30000,
-          serverSelectionTimeoutMS: 10000,
-          socketTimeoutMS: 45000,
-          connectTimeoutMS: 15000,
-          tls: true,
-          tlsAllowInvalidCertificates: true, // More permissive for problematic SSL
-          tlsAllowInvalidHostnames: true
-        };
-        
-        console.log('Attempting connection with relaxed TLS settings...');
-        await mongoose.connect(mongoURI, relaxedOptions);
-        console.log('✅ MongoDB connected with relaxed TLS settings');
-        await seedDefaultRooms();
-        return;
-      } catch (retryError) {
-        console.error('❌ Retry with relaxed TLS also failed:', retryError.message);
-      }
+    // Check for specific error types
+    const isSSLError = error.message.includes('SSL') || 
+                      error.message.includes('TLS') || 
+                      error.message.includes('tlsv1 alert') ||
+                      error.message.includes('ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR');
+    
+    const isIPWhitelistError = error.message.includes('IP that isn\'t whitelisted') ||
+                               error.message.includes('not authorized');
+    
+    if (isIPWhitelistError) {
+      console.log('� IP Whitelist Issue Detected!');
+      console.log('📋 To fix this:');
+      console.log('1. Go to MongoDB Atlas Dashboard');
+      console.log('2. Navigate to Network Access');
+      console.log('3. Add 0.0.0.0/0 to allow all IPs (or add Render\'s specific IPs)');
+      console.log('4. Wait a few minutes for the change to propagate');
     }
     
-    // Don't exit the process, let Render retry
-    console.log('⏰ Retrying connection in 10 seconds...');
-    setTimeout(connectDB, 10000); // Retry after 10 seconds
+    if (isSSLError) {
+      console.log('🔧 SSL/TLS error detected. Trying alternative connection methods...');
+      
+      // Try multiple fallback strategies
+      const fallbackStrategies = [
+        // Strategy 1: Disable SSL completely (not recommended but might work)
+        {
+          name: 'No TLS',
+          options: {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 15000,
+            tls: false,
+            ssl: false
+          }
+        },
+        // Strategy 2: Very permissive TLS
+        {
+          name: 'Permissive TLS',
+          options: {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 15000,
+            tls: true,
+            tlsAllowInvalidCertificates: true,
+            tlsAllowInvalidHostnames: true,
+            tlsInsecure: true
+          }
+        },
+        // Strategy 3: Legacy SSL settings
+        {
+          name: 'Legacy SSL',
+          options: {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 15000,
+            ssl: true,
+            sslValidate: false,
+            sslCA: null
+          }
+        }
+      ];
+      
+      for (const strategy of fallbackStrategies) {
+        try {
+          console.log(`🔄 Attempting ${strategy.name} connection...`);
+          await mongoose.connect(mongoURI, strategy.options);
+          console.log(`✅ MongoDB connected successfully using ${strategy.name}`);
+          await seedDefaultRooms();
+          return; // Success! Exit the function
+        } catch (fallbackError) {
+          console.log(`❌ ${strategy.name} failed: ${fallbackError.message}`);
+        }
+      }
+      
+      console.log('❌ All fallback strategies failed');
+    }
+    
+    // If we get here, all attempts failed
+    console.log('⏰ Retrying connection in 15 seconds...');
+    setTimeout(connectDB, 15000); // Retry after 15 seconds
   }
 };
 
@@ -374,6 +481,17 @@ app.get('/auth/user', (req, res) => {
   } else {
     res.status(401).json({ error: 'Not authenticated' });
   }
+});
+
+// Health check endpoint for debugging
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'Server is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    mongoStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    mongoReadyState: mongoose.connection.readyState
+  });
 });
 
 // API Routes

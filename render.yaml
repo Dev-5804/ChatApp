@@ -6,7 +6,7 @@ services:
     region: oregon
     buildCommand: VITE_API_URL=https://chatter-qwcb.onrender.com npm install && npm run build && cd server && npm install
     startCommand: cd server && npm start
-    healthCheckPath: /auth/user
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
