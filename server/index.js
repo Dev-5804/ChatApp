@@ -216,7 +216,15 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect(process.env.CLIENT_URL);
+    console.log('OAuth callback - NODE_ENV:', process.env.NODE_ENV);
+    console.log('OAuth callback - CLIENT_URL:', process.env.CLIENT_URL);
+    
+    const redirectUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://chatter-qwcb.onrender.com'
+      : (process.env.CLIENT_URL || 'http://localhost:5173');
+      
+    console.log('Redirecting to:', redirectUrl);
+    res.redirect(redirectUrl);
   }
 );
 
