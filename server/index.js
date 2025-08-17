@@ -147,21 +147,52 @@ const connectDB = async () => {
     
     console.log('Original MongoDB URI (partially masked):', mongoURI ? mongoURI.replace(/:[^:]*@/, ':***@') : 'undefined');
     
-    // Clean the MongoDB URI by removing any deprecated parameters
-    if (mongoURI) {
-      // Remove deprecated SSL/TLS parameters from the URI
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+    
+    // More aggressive URI cleaning - rebuild from base components
+    try {
+      const url = new URL(mongoURI);
+      
+      // Keep only essential parameters
+      const allowedParams = [
+        'retryWrites', 'w', 'authSource', 'tls', 'tlsInsecure', 
+        'serverSelectionTimeoutMS', 'connectTimeoutMS', 'socketTimeoutMS'
+      ];
+      
+      const cleanParams = new URLSearchParams();
+      for (const [key, value] of url.searchParams) {
+        if (allowedParams.includes(key)) {
+          cleanParams.append(key, value);
+        }
+      }
+      
+      // Rebuild the URI with only allowed parameters
+      mongoURI = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}`;
+      if (cleanParams.toString()) {
+        mongoURI += `?${cleanParams.toString()}`;
+      }
+      
+      console.log('Rebuilt MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
+    } catch (urlError) {
+      console.log('URL parsing failed, using fallback cleaning method...');
+      
+      // Fallback: Remove all known deprecated parameters
       mongoURI = mongoURI
         .replace(/[&?]sslValidate=(true|false)/gi, '')
         .replace(/[&?]ssl=(true|false)/gi, '')
         .replace(/[&?]bufferMaxEntries=\d+/gi, '')
-        .replace(/[&?]buffermaxentries=\d+/gi, '')  // Added lowercase version
+        .replace(/[&?]buffermaxentries=\d+/gi, '')
         .replace(/[&?]useNewUrlParser=(true|false)/gi, '')
-        .replace(/[&?]useUnifiedTopology=(true|false)/gi, '');
+        .replace(/[&?]useUnifiedTopology=(true|false)/gi, '')
+        .replace(/[&?]useCreateIndex=(true|false)/gi, '')
+        .replace(/[&?]useFindAndModify=(true|false)/gi, '');
       
-      // Clean up any double ampersands or question marks
+      // Clean up malformed query strings
       mongoURI = mongoURI.replace(/[&?]{2,}/g, '&').replace(/[?&]$/, '');
       
-      console.log('Cleaned MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
+      console.log('Fallback cleaned MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
     }
     
     console.log('Connecting to MongoDB...');
