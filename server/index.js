@@ -80,7 +80,14 @@ app.use(session({
   name: 'chatapp.session',
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    touchAfter: 24 * 3600 // lazy session update
+    touchAfter: 24 * 3600, // lazy session update
+    mongoOptions: {
+      tls: true,
+      ssl: true,
+      serverSelectionTimeoutMS: 30000,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    }
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
@@ -139,10 +146,67 @@ const upload = multer({
   }
 });
 
+// MongoDB connection with fixed TLS settings for Render compatibility
+const connectDB = async () => {
+  try {
+    const mongoURI = process.env.MONGODB_URI;
+    
+    await mongoose.connect(mongoURI, {
+      // Explicitly set TLS version and ciphers for compatibility
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      tlsAllowInvalidHostnames: false,
+      // Use more compatible SSL/TLS settings
+      ssl: true,
+      sslValidate: true,
+      // Connection pool settings
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferMaxEntries: 0,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+
+    console.log('✅ MongoDB connected successfully');
+    
+    // Seed default rooms after connection
+    await seedDefaultRooms();
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error);
+    // Don't exit the process, let Render retry
+    setTimeout(connectDB, 5000); // Retry after 5 seconds
+  }
+};
+
+// Function to seed default rooms
+const seedDefaultRooms = async () => {
+  try {
+    const defaultRooms = [
+      { name: 'General', description: 'General discussion', isDefault: true },
+      { name: 'Random', description: 'Random conversations', isDefault: true },
+      { name: 'Tech Talk', description: 'Technology discussions', isDefault: true },
+      { name: 'Help & Support', description: 'Get help and support', isDefault: true }
+    ];
+
+    for (const roomData of defaultRooms) {
+      const existingRoom = await Room.findOne({ name: roomData.name, isDefault: true });
+      if (!existingRoom) {
+        await Room.create({
+          ...roomData,
+          members: [],
+          createdBy: null
+        });
+        console.log(`Created default room: ${roomData.name}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error seeding default rooms:', error);
+  }
+};
+
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.log('MongoDB connection error:', err));
+connectDB();
 
 // Authentication routes
 app.get('/auth/google',

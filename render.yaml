@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: chatapp
+    name: Chatter
     runtime: node
     plan: free
     region: oregon
@@ -21,4 +21,4 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: CLIENT_URL
-        value: https://chatapp.onrender.com
+        value: https://chatter-qwcb.onrender.com
