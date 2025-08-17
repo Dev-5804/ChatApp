@@ -465,23 +465,6 @@ app.post('/api/rooms/:roomId/leave', async (req, res) => {
   }
 });
 
-// Handle React routing in production - serve index.html for all non-API routes
-if (process.env.NODE_ENV === 'production') {
-  // Serve the React app for the root route
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  });
-  
-  // Catch all other routes that don't start with /api, /auth, or /uploads
-  app.use((req, res, next) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/uploads')) {
-      res.sendFile(path.join(__dirname, '../dist/index.html'));
-    } else {
-      next();
-    }
-  });
-}
-
 // Socket.io connection handling
 const connectedUsers = new Map();
 
