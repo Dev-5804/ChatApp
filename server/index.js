@@ -53,7 +53,6 @@ const allowedOrigins = [
   'http://localhost:5173', // Development
   'http://localhost:3000', // Alternative development port
   process.env.CLIENT_URL,  // Production client URL
-  process.env.RAILWAY_STATIC_URL, // Railway static URL
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
 ].filter(Boolean);
 

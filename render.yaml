@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: chatapp
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build && cd server && npm install
+    startCommand: cd server && npm start
+    healthCheckPath: /auth/user
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        value: https://chatapp.onrender.com

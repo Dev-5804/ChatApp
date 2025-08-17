@@ -10,8 +10,7 @@
     "preview": "vite preview",
     "start:prod": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
-    "server:seed": "cd server && npm run seed",
-    "deploy": "npm run build && npm run start:prod"
+    "server:seed": "cd server && npm run seed"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",

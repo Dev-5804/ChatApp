@@ -4,21 +4,16 @@ A modern real-time chat application built with React, Node.js, Socket.io, and Mo
 
 ## 🚀 Quick Deploy
 
-### Deploy on Railway (Recommended)
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/your-repo)
+### Deploy on Render
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
 1. **Fork this repository**
-2. **Connect to [Railway.app](https://railway.app)**
-3. **Add environment variables** (see `.env.example`)
-4. **Deploy automatically!**
-
-### Deploy on Render
-1. **Fork this repository**  
 2. **Connect to [Render.com](https://render.com)**
-3. **Use these settings:**
-   - Build Command: `npm install && npm run build && cd server && npm install`
-   - Start Command: `cd server && npm start`
-4. **Add your environment variables**
+3. **Use the included `render.yaml` configuration**
+4. **Add environment variables** (see `RENDER_DEPLOY.md`)
+5. **Deploy automatically!**
+
+**📖 Complete deployment guide:** [RENDER_DEPLOY.md](RENDER_DEPLOY.md)
 
 ---
 
