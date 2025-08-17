@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { getApiUrl } from '../utils/apiUrl';
 
 const MessageInput = ({ onSendMessage, onTyping, onStopTyping }) => {
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiUrl = getApiUrl();
 
   const handleSubmit = (e) => {
     e.preventDefault();

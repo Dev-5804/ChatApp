@@ -17,6 +17,13 @@
 - Updated `render.yaml` to properly set environment variables
 - Added catch-all route to serve React app in production
 
+### 3. Express v5 Compatibility Error ❌ → ✅
+**Problem**: `TypeError: Missing parameter name at 1` due to Express v5 using strict `path-to-regexp`
+**Solution**:
+- Downgraded Express from v5.1.0 to v4.19.2 for stability
+- Downgraded Multer from v2.0.2 to v1.4.5-lts.1 for compatibility
+- Removed duplicate React routing handlers that were causing conflicts
+
 ## Files Modified
 
 1. **server/index.js**
@@ -24,12 +31,17 @@
    - Updated OAuth callback redirect logic
    - Added debugging logs
    - Added catch-all route for React app
+   - Removed duplicate route handlers
 
-2. **render.yaml**
+2. **server/package.json**
+   - Downgraded Express to v4.19.2
+   - Downgraded Multer to v1.4.5-lts.1
+
+3. **render.yaml**
    - Updated build command to use `.env.production`
    - Added `VITE_API_URL` environment variable
 
-3. **Created .env.production**
+4. **Created .env.production**
    - Set `VITE_API_URL=https://chatter-qwcb.onrender.com`
 
 ## Additional Steps Required

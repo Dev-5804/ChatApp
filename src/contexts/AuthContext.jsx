@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthContextDefinition';
+import { getApiUrl } from '../utils/apiUrl';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,7 +13,8 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
+      console.log('Checking auth with API URL:', apiUrl);
       const response = await axios.get(`${apiUrl}/auth/user`, {
         withCredentials: true
       });
@@ -25,13 +27,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const apiUrl = getApiUrl();
+    console.log('Starting login with API URL:', apiUrl);
     window.location.href = `${apiUrl}/auth/google`;
   };
 
   const logout = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       await axios.get(`${apiUrl}/auth/logout`, {
         withCredentials: true
       });

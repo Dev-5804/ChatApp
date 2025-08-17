@@ -6,6 +6,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import UserList from './UserList';
 import axios from 'axios';
+import { getApiUrl } from '../utils/apiUrl';
 
 const Chat = () => {
   const { user, logout } = useAuth();
@@ -16,7 +17,7 @@ const Chat = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const typingTimeoutRef = useRef(null);
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiUrl = getApiUrl();
 
   const loadRooms = useCallback(async () => {
     try {

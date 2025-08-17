@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { SocketContext } from './SocketContextDefinition';
+import { getApiUrl } from '../utils/apiUrl';
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socketUrl = getApiUrl();
+    console.log('Connecting socket to:', socketUrl);
     const newSocket = io(socketUrl, {
       withCredentials: true
     });

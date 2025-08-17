@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { getApiUrl } from '../utils/apiUrl';
 
 const MessageList = ({ messages, currentUser, typingUsers }) => {
   const messagesEndRef = useRef(null);
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiUrl = getApiUrl();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
