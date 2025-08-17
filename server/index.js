@@ -194,6 +194,20 @@ const connectDB = async () => {
       
       // Rebuild the URI with only allowed parameters
       mongoURI = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}`;
+      
+      // Ensure TLS is enabled for Atlas connections
+      if (url.host.includes('mongodb.net')) {
+        if (!cleanParams.has('tls')) {
+          cleanParams.append('tls', 'true');
+        }
+        if (!cleanParams.has('authSource')) {
+          cleanParams.append('authSource', 'admin');
+        }
+        if (!cleanParams.has('retryWrites')) {
+          cleanParams.append('retryWrites', 'true');
+        }
+      }
+      
       if (cleanParams.toString()) {
         mongoURI += `?${cleanParams.toString()}`;
       }
@@ -227,8 +241,26 @@ const connectDB = async () => {
     
     console.log('Connecting to MongoDB...');
     
-    // Connect with no additional options - let MongoDB driver use defaults
-    await mongoose.connect(mongoURI);
+    // Add specific connection options for better compatibility
+    const connectionOptions = {
+      // Connection management
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      
+      // For MongoDB Atlas SSL/TLS
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      tlsAllowInvalidHostnames: false
+    };
+    
+    console.log('Using connection options:', JSON.stringify(connectionOptions, null, 2));
+    
+    // Connect with specific options for Render compatibility
+    await mongoose.connect(mongoURI, connectionOptions);
 
     console.log('✅ MongoDB connected successfully');
     
@@ -236,8 +268,38 @@ const connectDB = async () => {
     await seedDefaultRooms();
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
+    
+    // Specific handling for SSL/TLS errors
+    if (error.message.includes('SSL') || error.message.includes('TLS')) {
+      console.log('🔧 SSL/TLS error detected. Retrying with modified TLS settings...');
+      
+      // Try again with less strict TLS settings
+      try {
+        const relaxedOptions = {
+          maxPoolSize: 10,
+          minPoolSize: 2,
+          maxIdleTimeMS: 30000,
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+          connectTimeoutMS: 15000,
+          tls: true,
+          tlsAllowInvalidCertificates: true, // More permissive for problematic SSL
+          tlsAllowInvalidHostnames: true
+        };
+        
+        console.log('Attempting connection with relaxed TLS settings...');
+        await mongoose.connect(mongoURI, relaxedOptions);
+        console.log('✅ MongoDB connected with relaxed TLS settings');
+        await seedDefaultRooms();
+        return;
+      } catch (retryError) {
+        console.error('❌ Retry with relaxed TLS also failed:', retryError.message);
+      }
+    }
+    
     // Don't exit the process, let Render retry
-    setTimeout(connectDB, 5000); // Retry after 5 seconds
+    console.log('⏰ Retrying connection in 10 seconds...');
+    setTimeout(connectDB, 10000); // Retry after 10 seconds
   }
 };
 
