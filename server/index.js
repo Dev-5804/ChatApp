@@ -80,14 +80,8 @@ app.use(session({
   name: 'chatapp.session',
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    touchAfter: 24 * 3600, // lazy session update
-    mongoOptions: {
-      tls: true,
-      ssl: true,
-      serverSelectionTimeoutMS: 30000,
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    }
+    touchAfter: 24 * 3600 // lazy session update
+    // Remove deprecated mongoOptions
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
@@ -152,20 +146,12 @@ const connectDB = async () => {
     const mongoURI = process.env.MONGODB_URI;
     
     await mongoose.connect(mongoURI, {
-      // Explicitly set TLS version and ciphers for compatibility
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      tlsAllowInvalidHostnames: false,
-      // Use more compatible SSL/TLS settings
-      ssl: true,
-      sslValidate: true,
-      // Connection pool settings
+      // Modern MongoDB connection options
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      bufferMaxEntries: 0,
-      useNewUrlParser: true,
-      useUnifiedTopology: true
+      // Remove deprecated options that cause errors
+      // ssl, sslValidate, bufferMaxEntries, useNewUrlParser, useUnifiedTopology are deprecated
     });
 
     console.log('✅ MongoDB connected successfully');
