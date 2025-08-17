@@ -145,6 +145,8 @@ const connectDB = async () => {
   try {
     let mongoURI = process.env.MONGODB_URI;
     
+    console.log('Original MongoDB URI (partially masked):', mongoURI ? mongoURI.replace(/:[^:]*@/, ':***@') : 'undefined');
+    
     // Clean the MongoDB URI by removing any deprecated parameters
     if (mongoURI) {
       // Remove deprecated SSL/TLS parameters from the URI
@@ -152,11 +154,14 @@ const connectDB = async () => {
         .replace(/[&?]sslValidate=(true|false)/gi, '')
         .replace(/[&?]ssl=(true|false)/gi, '')
         .replace(/[&?]bufferMaxEntries=\d+/gi, '')
+        .replace(/[&?]buffermaxentries=\d+/gi, '')  // Added lowercase version
         .replace(/[&?]useNewUrlParser=(true|false)/gi, '')
         .replace(/[&?]useUnifiedTopology=(true|false)/gi, '');
       
       // Clean up any double ampersands or question marks
       mongoURI = mongoURI.replace(/[&?]{2,}/g, '&').replace(/[?&]$/, '');
+      
+      console.log('Cleaned MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
     }
     
     console.log('Connecting to MongoDB...');
