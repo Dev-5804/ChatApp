@@ -143,16 +143,26 @@ const upload = multer({
 // MongoDB connection with fixed TLS settings for Render compatibility
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI;
+    let mongoURI = process.env.MONGODB_URI;
     
-    await mongoose.connect(mongoURI, {
-      // Modern MongoDB connection options
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      // Remove deprecated options that cause errors
-      // ssl, sslValidate, bufferMaxEntries, useNewUrlParser, useUnifiedTopology are deprecated
-    });
+    // Clean the MongoDB URI by removing any deprecated parameters
+    if (mongoURI) {
+      // Remove deprecated SSL/TLS parameters from the URI
+      mongoURI = mongoURI
+        .replace(/[&?]sslValidate=(true|false)/gi, '')
+        .replace(/[&?]ssl=(true|false)/gi, '')
+        .replace(/[&?]bufferMaxEntries=\d+/gi, '')
+        .replace(/[&?]useNewUrlParser=(true|false)/gi, '')
+        .replace(/[&?]useUnifiedTopology=(true|false)/gi, '');
+      
+      // Clean up any double ampersands or question marks
+      mongoURI = mongoURI.replace(/[&?]{2,}/g, '&').replace(/[?&]$/, '');
+    }
+    
+    console.log('Connecting to MongoDB...');
+    
+    // Use minimal connection options
+    await mongoose.connect(mongoURI);
 
     console.log('✅ MongoDB connected successfully');
     
