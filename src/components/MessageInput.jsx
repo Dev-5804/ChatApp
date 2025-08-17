@@ -6,6 +6,7 @@ const MessageInput = ({ onSendMessage, onTyping, onStopTyping }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -62,7 +63,7 @@ const MessageInput = ({ onSendMessage, onTyping, onStopTyping }) => {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await axios.post('http://localhost:5000/api/upload', formData, {
+      const response = await axios.post(`${apiUrl}/api/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

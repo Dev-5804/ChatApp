@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 
 const MessageList = ({ messages, currentUser, typingUsers }) => {
   const messagesEndRef = useRef(null);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,25 +90,25 @@ const MessageList = ({ messages, currentUser, typingUsers }) => {
                     <div>
                       {/* Debug info */}
                       <div className="text-xs text-gray-500 mb-1">
-                        Image URL: http://localhost:5000{message.image?.url}
+                        Image URL: {apiUrl}{message.image?.url}
                       </div>
                       <img
-                        src={`http://localhost:5000${message.image?.url || ''}`}
+                        src={`${apiUrl}${message.image?.url || ''}`}
                         alt="Shared image"
                         className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity mb-1"
-                        onClick={() => window.open(`http://localhost:5000${message.image?.url}`, '_blank')}
+                        onClick={() => window.open(`${apiUrl}${message.image?.url}`, '_blank')}
                         onError={(e) => {
-                          console.error('Image failed to load:', `http://localhost:5000${message.image?.url}`);
+                          console.error('Image failed to load:', `${apiUrl}${message.image?.url}`);
                           console.error('Image object:', message.image);
                           e.target.style.display = 'none';
                           e.target.nextElementSibling.style.display = 'block';
                         }}
-                        onLoad={() => console.log('Image loaded successfully:', `http://localhost:5000${message.image?.url}`)}
+                        onLoad={() => console.log('Image loaded successfully:', `${apiUrl}${message.image?.url}`)}
                       />
                       <div style={{display: 'none'}} className="text-red-500 p-2 border border-red-300 rounded bg-red-50">
                         ❌ Failed to load image: {message.image?.originalName || 'Unknown'}
                         <br />
-                        URL: http://localhost:5000{message.image?.url}
+                        URL: {apiUrl}{message.image?.url}
                       </div>
                       {message.content && (
                         <p className="mt-2">{message.content}</p>

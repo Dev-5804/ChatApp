@@ -12,7 +12,8 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/auth/user', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.get(`${apiUrl}/auth/user`, {
         withCredentials: true
       });
       setUser(response.data);
@@ -24,12 +25,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = () => {
-    window.location.href = 'http://localhost:5000/auth/google';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   const logout = async () => {
     try {
-      await axios.get('http://localhost:5000/auth/logout', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      await axios.get(`${apiUrl}/auth/logout`, {
         withCredentials: true
       });
       setUser(null);

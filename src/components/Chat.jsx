@@ -16,10 +16,11 @@ const Chat = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const typingTimeoutRef = useRef(null);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const loadRooms = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/rooms', {
+      const response = await axios.get(`${apiUrl}/api/rooms`, {
         withCredentials: true
       });
       setRooms(response.data);
@@ -134,7 +135,7 @@ const Chat = () => {
 
   const loadMessages = async (roomId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/rooms/${roomId}/messages`, {
+      const response = await axios.get(`${apiUrl}/api/rooms/${roomId}/messages`, {
         withCredentials: true
       });
       setMessages(response.data);
@@ -183,7 +184,7 @@ const Chat = () => {
 
   const handleJoinRoom = async (roomId) => {
     try {
-      const response = await axios.post(`http://localhost:5000/api/rooms/${roomId}/join`, {}, {
+      const response = await axios.post(`${apiUrl}/api/rooms/${roomId}/join`, {}, {
         withCredentials: true
       });
       
@@ -205,7 +206,7 @@ const Chat = () => {
 
   const handleLeaveRoom = async (roomId) => {
     try {
-      const response = await axios.post(`http://localhost:5000/api/rooms/${roomId}/leave`, {}, {
+      const response = await axios.post(`${apiUrl}/api/rooms/${roomId}/leave`, {}, {
         withCredentials: true
       });
       
@@ -220,7 +221,7 @@ const Chat = () => {
           socket.emit('leave-room', roomId);
           
           // Find another room the user has joined
-          const updatedRooms = await axios.get('http://localhost:5000/api/rooms', {
+          const updatedRooms = await axios.get(`${apiUrl}/api/rooms`, {
             withCredentials: true
           });
           const joinedRoom = updatedRooms.data.find(r => 
@@ -313,7 +314,7 @@ const Chat = () => {
 
   const createRoom = async (roomData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/rooms', roomData, {
+      const response = await axios.post(`${apiUrl}/api/rooms`, roomData, {
         withCredentials: true
       });
       setRooms(prev => [response.data, ...prev]);

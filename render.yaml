@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build && cd server && npm install
+    buildCommand: VITE_API_URL=https://chatter-qwcb.onrender.com npm install && npm run build && cd server && npm install
     startCommand: cd server && npm start
     healthCheckPath: /auth/user
     envVars:
