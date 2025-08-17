@@ -140,29 +140,53 @@ const upload = multer({
   }
 });
 
-// MongoDB connection with fixed TLS settings for Render compatibility
+// MongoDB connection with proper error handling for Render
 const connectDB = async () => {
   try {
     let mongoURI = process.env.MONGODB_URI;
     
-    console.log('Original MongoDB URI (partially masked):', mongoURI ? mongoURI.replace(/:[^:]*@/, ':***@') : 'undefined');
+    console.log('Attempting MongoDB connection...');
     
     if (!mongoURI) {
       throw new Error('MONGODB_URI environment variable is not set');
     }
     
-    // More aggressive URI cleaning - rebuild from base components
+    // Clean the MongoDB URI to remove deprecated parameters
     try {
       const url = new URL(mongoURI);
       
-      // Keep only essential parameters
+      // Keep only modern, supported parameters
       const allowedParams = [
-        'retryWrites', 'w', 'authSource', 'tls', 'tlsInsecure', 
-        'serverSelectionTimeoutMS', 'connectTimeoutMS', 'socketTimeoutMS'
+        'retryWrites',
+        'w',
+        'authSource',
+        'tls',
+        'tlsAllowInvalidCertificates',
+        'tlsAllowInvalidHostnames',
+        'serverSelectionTimeoutMS',
+        'connectTimeoutMS',
+        'socketTimeoutMS',
+        'maxPoolSize',
+        'minPoolSize',
+        'maxIdleTimeMS',
+        'appName'
       ];
       
       const cleanParams = new URLSearchParams();
       for (const [key, value] of url.searchParams) {
+        const lowerKey = key.toLowerCase();
+        // Remove any deprecated parameters
+        if (lowerKey === 'sslvalidate' || 
+            lowerKey === 'ssl' || 
+            lowerKey === 'buffermaxentries' ||
+            lowerKey === 'usenewurlparser' ||
+            lowerKey === 'useunifiedtopology' ||
+            lowerKey === 'usecreateindex' ||
+            lowerKey === 'usefindandmodify') {
+          console.log(`Removing deprecated parameter: ${key}`);
+          continue;
+        }
+        
         if (allowedParams.includes(key)) {
           cleanParams.append(key, value);
         }
@@ -174,30 +198,36 @@ const connectDB = async () => {
         mongoURI += `?${cleanParams.toString()}`;
       }
       
-      console.log('Rebuilt MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
+      console.log('Cleaned MongoDB URI (connection string ready)');
     } catch (urlError) {
-      console.log('URL parsing failed, using fallback cleaning method...');
+      console.log('URL parsing failed, using string replacement method...');
       
-      // Fallback: Remove all known deprecated parameters
-      mongoURI = mongoURI
-        .replace(/[&?]sslValidate=(true|false)/gi, '')
-        .replace(/[&?]ssl=(true|false)/gi, '')
-        .replace(/[&?]bufferMaxEntries=\d+/gi, '')
-        .replace(/[&?]buffermaxentries=\d+/gi, '')
-        .replace(/[&?]useNewUrlParser=(true|false)/gi, '')
-        .replace(/[&?]useUnifiedTopology=(true|false)/gi, '')
-        .replace(/[&?]useCreateIndex=(true|false)/gi, '')
-        .replace(/[&?]useFindAndModify=(true|false)/gi, '');
+      // Fallback: Remove all known deprecated parameters using string replacement
+      const deprecatedParams = [
+        'sslValidate',
+        'ssl',
+        'bufferMaxEntries',
+        'buffermaxentries', 
+        'useNewUrlParser',
+        'useUnifiedTopology',
+        'useCreateIndex',
+        'useFindAndModify'
+      ];
+      
+      for (const param of deprecatedParams) {
+        const regex = new RegExp(`[&?]${param}=(true|false|\\d+)`, 'gi');
+        mongoURI = mongoURI.replace(regex, '');
+      }
       
       // Clean up malformed query strings
       mongoURI = mongoURI.replace(/[&?]{2,}/g, '&').replace(/[?&]$/, '');
       
-      console.log('Fallback cleaned MongoDB URI (partially masked):', mongoURI.replace(/:[^:]*@/, ':***@'));
+      console.log('MongoDB URI cleaned using fallback method');
     }
     
     console.log('Connecting to MongoDB...');
     
-    // Use minimal connection options
+    // Connect with no additional options - let MongoDB driver use defaults
     await mongoose.connect(mongoURI);
 
     console.log('✅ MongoDB connected successfully');
@@ -241,9 +271,12 @@ const seedDefaultRooms = async () => {
 connectDB();
 
 // Authentication routes
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+app.get('/auth/google', (req, res, next) => {
+  console.log('Starting Google OAuth flow...');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Google Client ID set:', !!process.env.GOOGLE_CLIENT_ID);
+  next();
+}, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
@@ -251,9 +284,13 @@ app.get('/auth/google/callback',
     console.log('OAuth callback - NODE_ENV:', process.env.NODE_ENV);
     console.log('OAuth callback - CLIENT_URL:', process.env.CLIENT_URL);
     
-    const redirectUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://chatter-qwcb.onrender.com'
-      : (process.env.CLIENT_URL || 'http://localhost:5173');
+    // Fix the redirect URL to use the correct production URL
+    let redirectUrl;
+    if (process.env.NODE_ENV === 'production') {
+      redirectUrl = process.env.CLIENT_URL || 'https://chatter-qwcb.onrender.com';
+    } else {
+      redirectUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    }
       
     console.log('Redirecting to:', redirectUrl);
     res.redirect(redirectUrl);
@@ -555,8 +592,17 @@ io.on('connection', (socket) => {
   });
 });
 
+// Catch-all handler: send back React's index.html file in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
+}
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Client URL: ${process.env.CLIENT_URL}`);
+  console.log(`MongoDB URI set: ${!!process.env.MONGODB_URI}`);
 });
